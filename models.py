@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     user_id: str
+    end_conversation: bool = False
 
 
 class HealthResponse(BaseModel):

@@ -43,7 +43,6 @@
       background: #e94560;
       display: flex;
       align-items: center;
-      justify-content: font-bold;
       font-weight: 700;
       font-size: 18px;
       color: #fff;
@@ -154,8 +153,61 @@
 
     .send-btn:hover { background: #e94560; }
     .send-btn:disabled { background: #ccc; cursor: not-allowed; }
-
     .send-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* Modales */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.visible .modal { transform: scale(1); }
+
+    .modal h3 { font-size: 18px; color: #1a1a2e; margin-bottom: 10px; }
+    .modal p  { font-size: 14px; color: #666; margin-bottom: 24px; }
+
+    .modal-actions { display: flex; gap: 12px; justify-content: center; }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 24px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary { background: #1a1a2e; color: #fff; }
+    .btn-primary:hover { background: #e94560; }
+    .btn-secondary { background: #f0f2f5; color: #1a1a2e; }
+    .btn-secondary:hover { background: #e0e0e0; }
+
+    .modal-icon { font-size: 40px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -179,24 +231,46 @@
     </div>
 
     <div class="input-area">
-      <input
-        type="text"
-        id="input"
-        placeholder="Escribí tu mensaje..."
-        autocomplete="off"
-      />
+      <input type="text" id="input" placeholder="Escribí tu mensaje..." autocomplete="off" />
       <button class="send-btn" id="send-btn">
         <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
       </button>
     </div>
   </div>
 
+  <!-- Modal de confirmación -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal">
+      <div class="modal-icon">👋</div>
+      <h3>¿Querés finalizar la conversación?</h3>
+      <p>Podés volver a escribirnos cuando quieras.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="btn-cancel">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirm">Finalizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de despedida -->
+  <div class="modal-overlay" id="bye-modal">
+    <div class="modal">
+      <div class="modal-icon">🛍️</div>
+      <h3>¡Gracias por contactarnos!</h3>
+      <p>Fue un placer ayudarte. ¡Hasta la próxima en TechShop!</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btn-close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const USER_ID = "user_" + Math.random().toString(36).slice(2, 8);
-    const messagesEl = document.getElementById("messages");
-    const inputEl = document.getElementById("input");
-    const sendBtn = document.getElementById("send-btn");
-    const typingEl = document.getElementById("typing");
+    const messagesEl   = document.getElementById("messages");
+    const inputEl      = document.getElementById("input");
+    const sendBtn      = document.getElementById("send-btn");
+    const typingEl     = document.getElementById("typing");
+    const confirmModal = document.getElementById("confirm-modal");
+    const byeModal     = document.getElementById("bye-modal");
 
     function addMessage(text, role) {
       const div = document.createElement("div");
@@ -205,6 +279,31 @@
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
+
+    function showModal(el) { el.classList.add("visible"); }
+    function hideModal(el) { el.classList.remove("visible"); }
+
+    function lockInput() {
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
+      inputEl.placeholder = "Conversación finalizada.";
+    }
+
+    document.getElementById("btn-cancel").addEventListener("click", () => {
+      hideModal(confirmModal);
+      inputEl.focus();
+    });
+
+    document.getElementById("btn-confirm").addEventListener("click", async () => {
+      hideModal(confirmModal);
+      await fetch(`/chat/${USER_ID}`, { method: "DELETE" });
+      showModal(byeModal);
+      lockInput();
+    });
+
+    document.getElementById("btn-close").addEventListener("click", () => {
+      hideModal(byeModal);
+    });
 
     async function sendMessage() {
       const text = inputEl.value.trim();
@@ -230,6 +329,7 @@
           addMessage("Error: " + (data.detail || "algo salió mal"), "error");
         } else {
           addMessage(data.response, "assistant");
+          if (data.end_conversation) showModal(confirmModal);
         }
       } catch {
         addMessage("No se pudo conectar con el servidor.", "error");

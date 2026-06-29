@@ -1,12 +1,12 @@
-from dotenv import load_dotenv
 import logging
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
-
-logger = logging.getLogger(__name__)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -33,9 +33,18 @@ async def health():
     return HealthResponse(status="ok")
 
 
+_CLOSING_KEYWORDS = {"chau", "adiós", "adios", "hasta luego", "bye", "nos vemos", "gracias", "muchas gracias"}
+
+def _is_closing(message: str) -> bool:
+    lower = message.lower().strip()
+    return len(lower.split()) <= 4 and any(kw in lower for kw in _CLOSING_KEYWORDS)
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest):
     history = _conversation_store.get(body.user_id, [])
+
+    ending = _is_closing(body.message)
 
     try:
         reply = await get_llm_response(body.message, history)
@@ -48,7 +57,7 @@ async def chat(body: ChatRequest):
         {"role": "assistant", "content": reply},
     ]
 
-    return ChatResponse(response=reply, user_id=body.user_id)
+    return ChatResponse(response=reply, user_id=body.user_id, end_conversation=ending)
 
 
 @app.delete("/chat/{user_id}", response_model=DeleteResponse)
