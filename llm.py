@@ -1,3 +1,4 @@
+import json
 import os
 
 from groq import AsyncGroq, AuthenticationError
@@ -21,13 +22,21 @@ Precios aproximados en USD:
 
 Garantías: 12 meses oficial en todos los productos. Planes extendidos de hasta 3 años disponibles.
 
-Reglas:
+Reglas generales:
 - Responde SIEMPRE en español, sin importar el idioma en que te escriban
 - Sé cálido, profesional y conciso — máximo 3 oraciones por respuesta
 - Todos los productos del catálogo están en stock
 - Nunca inventes modelos fuera del catálogo ni fechas de reposición
 - Si el problema técnico es complejo, sugerí acercarse a una sucursal de TechShop
-- Siempre ofrecé una pregunta de seguimiento para mantener la conversación útil
+
+Flujo de compra (seguí este orden estrictamente, UNA pregunta por turno):
+- Cuando el usuario muestre intención de comprar, guialo con estas preguntas en secuencia:
+  1. ¿Qué categoría de producto te interesa? (si no lo mencionó)
+  2. ¿Qué modelo en particular? (ofrecé las opciones del catálogo)
+  3. ¿Alguna especificación importante? (almacenamiento, color, conectividad)
+  4. Resumí la elección: "Perfecto, entonces te interesa el [producto] [modelo] a ~$[precio]. Para finalizar la compra escribí 'confirmar compra' y te conectamos con un asesor."
+- No hagas más de una pregunta por turno.
+- No ofrezcas el link de compra ni el contacto directo — eso lo maneja el sistema automáticamente cuando el usuario confirme.
 """
 
 _MOCK_RESPONSES: list[tuple[list[str], str]] = [
@@ -101,7 +110,8 @@ _ALWAYS_ALLOW = {
     "hola", "buenas", "buen dia", "buen día", "buenos dias", "buenos días",
     "buenas tardes", "buenas noches", "hey", "hi", "hello", "saludos",
     "gracias", "de nada", "ok", "okay", "sí", "si", "no", "chau", "adios",
-    "adiós", "hasta luego", "ayuda", "ayudame", "ayudame", "necesito ayuda",
+    "adiós", "hasta luego", "ayuda", "ayudame", "necesito ayuda",
+    "confirmar compra", "confirmo la compra", "confirmo compra", "quiero confirmar",
 }
 
 
@@ -135,3 +145,32 @@ async def get_llm_response(message: str, history: list[dict]) -> str:
     except AuthenticationError:
         raise RuntimeError("API key inválida. Verificá el valor de GROQ_API_KEY en tu archivo .env.")
     return response.choices[0].message.content
+
+
+async def extract_purchase_details(history: list[dict]) -> dict:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return {}
+
+    client = AsyncGroq(api_key=api_key)
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            max_tokens=200,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Analizá la conversación y extraé los detalles del producto que el usuario quiere comprar. "
+                        "Respondé SOLO con un JSON válido con exactamente estos campos: "
+                        '{"producto": "", "modelo": "", "almacenamiento": "", "color": "", "precio": ""}. '
+                        "Si algún campo no fue mencionado, dejá el valor como cadena vacía."
+                    ),
+                },
+                *history,
+            ],
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception:
+        return {}
