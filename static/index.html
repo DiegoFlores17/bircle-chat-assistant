@@ -373,7 +373,7 @@
             if (d.modelo)         lines.push(`• Modelo: ${d.modelo}`);
             if (d.almacenamiento) lines.push(`• Almacenamiento: ${d.almacenamiento}`);
             if (d.color)          lines.push(`• Color: ${d.color}`);
-            if (d.precio)         lines.push(`• Precio: ${d.precio}`);
+            if (d["precio aproximado"]) lines.push(`• Precio aproximado: ${d["precio aproximado"]}`);
             lines.push("\nQuedo a la espera de su respuesta. ¡Gracias!");
             purchaseMessage = lines.join("\n");
             showModal(purchaseModal);
