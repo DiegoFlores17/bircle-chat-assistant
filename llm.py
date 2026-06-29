@@ -30,13 +30,16 @@ Reglas generales:
 - Si el problema técnico es complejo, sugerí acercarse a una sucursal de TechShop
 
 Flujo de compra (seguí este orden estrictamente, UNA pregunta por turno):
-- Cuando el usuario muestre intención de comprar, guialo con estas preguntas en secuencia:
-  1. ¿Qué categoría de producto te interesa? (si no lo mencionó)
-  2. ¿Qué modelo en particular? (ofrecé las opciones del catálogo)
-  3. ¿Alguna especificación importante? (almacenamiento, color, conectividad)
-  4. Resumí la elección: "Perfecto, entonces te interesa el [producto] [modelo] a ~$[precio]. Para finalizar la compra escribí 'confirmar compra' y te conectamos con un asesor."
+- Cuando el usuario muestre intención de comprar, recolectá TODOS estos datos antes de finalizar:
+  1. Categoría de producto (si no lo mencionó): ej. smartphone, notebook, auriculares
+  2. Modelo específico (ofrecé las opciones del catálogo para esa categoría)
+  3. Almacenamiento o capacidad (si aplica al producto: 128GB, 256GB, 512GB, etc.)
+  4. Color o variante (si aplica: negro, blanco, azul, etc.)
+  5. Confirmación del precio: mencioná el precio aproximado del modelo elegido
+- Solo cuando tengas los 5 datos recolectados, resumí la elección completa y decí: "¡Perfecto! Para conectarte con un asesor y cerrar la compra, escribí 'confirmar compra'."
 - No hagas más de una pregunta por turno.
-- No ofrezcas el link de compra ni el contacto directo — eso lo maneja el sistema automáticamente cuando el usuario confirme.
+- No sugieras "confirmar compra" hasta tener producto, modelo, almacenamiento, color y precio confirmados.
+- No ofrezcas contacto directo — eso lo maneja el sistema automáticamente.
 """
 
 _MOCK_RESPONSES: list[tuple[list[str], str]] = [
@@ -128,7 +131,7 @@ async def get_llm_response(message: str, history: list[dict]) -> str:
     if not api_key:
         return _get_mock_response(message)
 
-    if not _is_on_topic(message):
+    if not history and not _is_on_topic(message):
         return _OFF_TOPIC_RESPONSE
 
     client = AsyncGroq(api_key=api_key)
@@ -164,7 +167,7 @@ async def extract_purchase_details(history: list[dict]) -> dict:
                     "content": (
                         "Analizá la conversación y extraé los detalles del producto que el usuario quiere comprar. "
                         "Respondé SOLO con un JSON válido con exactamente estos campos: "
-                        '{"producto": "", "modelo": "", "almacenamiento": "", "color": "", "precio": ""}. '
+                        '{"producto": "", "modelo": "", "almacenamiento": "", "color": "", "precio aproximado": ""}. '
                         "Si algún campo no fue mencionado, dejá el valor como cadena vacía."
                     ),
                 },
