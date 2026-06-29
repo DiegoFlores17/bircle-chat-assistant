@@ -238,15 +238,29 @@
     </div>
   </div>
 
-  <!-- Modal de confirmación -->
+  <!-- Modal de cierre con opciones -->
   <div class="modal-overlay" id="confirm-modal">
     <div class="modal">
       <div class="modal-icon">👋</div>
-      <h3>¿Querés finalizar la conversación?</h3>
-      <p>Podés volver a escribirnos cuando quieras.</p>
+      <h3>¿Qué querés hacer?</h3>
+      <p>Podés finalizar la conversación o continuar para cerrar una compra.</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" id="btn-cancel">Cancelar</button>
-        <button class="btn btn-primary" id="btn-confirm">Finalizar</button>
+        <button class="btn btn-secondary" id="btn-end-chat">Finalizar conversación</button>
+        <button class="btn btn-primary" id="btn-end-purchase">Finalizar compra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de compra -->
+  <div class="modal-overlay" id="purchase-modal">
+    <div class="modal">
+      <div class="modal-icon">🛒</div>
+      <h3>¡Excelente elección!</h3>
+      <p>¿Por dónde preferís que te contactemos para cerrar la compra?</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btn-whatsapp">WhatsApp</button>
+        <button class="btn btn-secondary" id="btn-email">Email</button>
       </div>
     </div>
   </div>
@@ -269,8 +283,14 @@
     const inputEl      = document.getElementById("input");
     const sendBtn      = document.getElementById("send-btn");
     const typingEl     = document.getElementById("typing");
-    const confirmModal = document.getElementById("confirm-modal");
-    const byeModal     = document.getElementById("bye-modal");
+    const confirmModal  = document.getElementById("confirm-modal");
+    const byeModal      = document.getElementById("bye-modal");
+    const purchaseModal = document.getElementById("purchase-modal");
+
+    const WA_NUMBER = "5493512350995";
+    const CONTACT_EMAIL = "jdiegoflores2002@gmail.com";
+
+    let purchaseMessage = "";
 
     function addMessage(text, role) {
       const div = document.createElement("div");
@@ -289,16 +309,33 @@
       inputEl.placeholder = "Conversación finalizada.";
     }
 
+    document.getElementById("btn-whatsapp").addEventListener("click", () => {
+      const text = encodeURIComponent(purchaseMessage);
+      window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, "_blank");
+      hideModal(purchaseModal);
+    });
+
+    document.getElementById("btn-email").addEventListener("click", () => {
+      const subject = encodeURIComponent("Consulta de compra - TechShop");
+      window.open(`mailto:${CONTACT_EMAIL}?subject=${subject}&body=${encodeURIComponent(purchaseMessage)}`, "_blank");
+      hideModal(purchaseModal);
+    });
+
     document.getElementById("btn-cancel").addEventListener("click", () => {
       hideModal(confirmModal);
       inputEl.focus();
     });
 
-    document.getElementById("btn-confirm").addEventListener("click", async () => {
+    document.getElementById("btn-end-chat").addEventListener("click", async () => {
       hideModal(confirmModal);
       await fetch(`/chat/${USER_ID}`, { method: "DELETE" });
       showModal(byeModal);
       lockInput();
+    });
+
+    document.getElementById("btn-end-purchase").addEventListener("click", () => {
+      hideModal(confirmModal);
+      showModal(purchaseModal);
     });
 
     document.getElementById("btn-close").addEventListener("click", () => {
@@ -329,7 +366,18 @@
           addMessage("Error: " + (data.detail || "algo salió mal"), "error");
         } else {
           addMessage(data.response, "assistant");
-          if (data.end_conversation) showModal(confirmModal);
+          if (data.purchase_ready) {
+            const d = data.purchase_details || {};
+            const lines = ["Hola! Me contacto desde TechShop. Quisiera comprar:"];
+            if (d.producto)       lines.push(`• Producto: ${d.producto}`);
+            if (d.modelo)         lines.push(`• Modelo: ${d.modelo}`);
+            if (d.almacenamiento) lines.push(`• Almacenamiento: ${d.almacenamiento}`);
+            if (d.color)          lines.push(`• Color: ${d.color}`);
+            if (d.precio)         lines.push(`• Precio: ${d.precio}`);
+            lines.push("\nQuedo a la espera de su respuesta. ¡Gracias!");
+            purchaseMessage = lines.join("\n");
+            showModal(purchaseModal);
+          } else if (data.end_conversation) showModal(confirmModal);
         }
       } catch {
         addMessage("No se pudo conectar con el servidor.", "error");

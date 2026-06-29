@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-from llm import get_llm_response
+from llm import extract_purchase_details, get_llm_response
 from models import ChatRequest, ChatResponse, DeleteResponse, HealthResponse
 
 app = FastAPI(title="TechShop Assistant", version="1.0.0")
@@ -35,16 +35,23 @@ async def health():
 
 _CLOSING_KEYWORDS = {"chau", "adiós", "adios", "hasta luego", "bye", "nos vemos", "gracias", "muchas gracias"}
 
+_PURCHASE_READY_KEYWORDS = {"confirmar compra", "confirmo la compra", "confirmo compra", "quiero confirmar"}
+
 def _is_closing(message: str) -> bool:
     lower = message.lower().strip()
     return len(lower.split()) <= 4 and any(kw in lower for kw in _CLOSING_KEYWORDS)
+
+def _is_purchase_ready(message: str) -> bool:
+    lower = message.lower().strip()
+    return any(kw in lower for kw in _PURCHASE_READY_KEYWORDS)
 
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest):
     history = _conversation_store.get(body.user_id, [])
 
-    ending = _is_closing(body.message)
+    ending  = _is_closing(body.message)
+    buying  = _is_purchase_ready(body.message)
 
     try:
         reply = await get_llm_response(body.message, history)
@@ -57,7 +64,9 @@ async def chat(body: ChatRequest):
         {"role": "assistant", "content": reply},
     ]
 
-    return ChatResponse(response=reply, user_id=body.user_id, end_conversation=ending)
+    details = await extract_purchase_details(history) if buying else {}
+
+    return ChatResponse(response=reply, user_id=body.user_id, end_conversation=ending, purchase_ready=buying, purchase_details=details)
 
 
 @app.delete("/chat/{user_id}", response_model=DeleteResponse)
