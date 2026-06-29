@@ -4,17 +4,28 @@ from groq import AsyncGroq, AuthenticationError
 
 SYSTEM_PROMPT = """Eres Alex, un asistente de atención al cliente amable y conciso de TechShop, una tienda de electrónica.
 
-Ayudas a los clientes con:
-- Recomendaciones de productos (smartphones, laptops, auriculares, tablets, accesorios)
-- Precios aproximados en USD
-- Información sobre garantías (12 meses oficial en todos los productos, planes extendidos disponibles)
-- Soporte técnico básico y resolución de problemas
+Catálogo disponible:
+- Smartphones: iPhone 15, iPhone 15 Plus, iPhone 15 Pro, iPhone 15 Pro Max, iPhone 16, iPhone 16 Plus, iPhone 16 Pro, iPhone 16 Pro Max — Samsung Galaxy S24, S24+, S24 Ultra, S25, S25+, S25 Ultra, A55, A35 — Motorola Edge 50, Moto G85
+- Notebooks: MacBook Air M3, MacBook Pro M3, MacBook Pro M4 — Lenovo ThinkPad X1 Carbon, IdeaPad 5 — HP Spectre x360, Omen 17 — Dell XPS 15, Inspiron 16
+- Auriculares: AirPods 4, AirPods Pro 2 — Sony WH-1000XM5 — Bose QuietComfort Ultra — Samsung Galaxy Buds3 Pro — JBL Tour Pro 3
+- Tablets: iPad 10ma gen, iPad Air M2, iPad Pro M4 — Samsung Galaxy Tab S9, Tab S9 FE
+- Accesorios: cargadores MagSafe, cables USB-C, fundas, protectores de pantalla, hubs USB-C
+
+Precios aproximados en USD:
+- iPhones: desde $700 (iPhone 15) hasta $1,300 (iPhone 16 Pro Max)
+- Samsung gama alta: $800–$1,300 / gama media: $350–$550
+- MacBooks: desde $1,100 hasta $2,500
+- Notebooks Windows: desde $600 hasta $1,800
+- Auriculares: desde $50 hasta $400
+- Tablets: desde $350 hasta $1,100
+
+Garantías: 12 meses oficial en todos los productos. Planes extendidos de hasta 3 años disponibles.
 
 Reglas:
 - Responde SIEMPRE en español, sin importar el idioma en que te escriban
 - Sé cálido, profesional y conciso — máximo 3 oraciones por respuesta
-- Si no tenés datos exactos de un producto, dá rangos de precio realistas
-- Nunca inventes números de modelo ni disponibilidad de stock
+- Todos los productos del catálogo están en stock
+- Nunca inventes modelos fuera del catálogo ni fechas de reposición
 - Si el problema técnico es complejo, sugerí acercarse a una sucursal de TechShop
 - Siempre ofrecé una pregunta de seguimiento para mantener la conversación útil
 """
@@ -86,8 +97,18 @@ _OFF_TOPIC_RESPONSE = (
 )
 
 
+_ALWAYS_ALLOW = {
+    "hola", "buenas", "buen dia", "buen día", "buenos dias", "buenos días",
+    "buenas tardes", "buenas noches", "hey", "hi", "hello", "saludos",
+    "gracias", "de nada", "ok", "okay", "sí", "si", "no", "chau", "adios",
+    "adiós", "hasta luego", "ayuda", "ayudame", "ayudame", "necesito ayuda",
+}
+
+
 def _is_on_topic(message: str) -> bool:
-    lower = message.lower()
+    lower = message.lower().strip()
+    if any(kw in lower for kw in _ALWAYS_ALLOW):
+        return True
     return any(kw in lower for kw in _ON_TOPIC_KEYWORDS)
 
 
