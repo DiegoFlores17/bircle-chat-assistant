@@ -1,107 +1,128 @@
 # TechShop Assistant
 
-A customer service chatbot for a fictional electronics store, built with FastAPI and powered by Groq (Llama 3.3 70B).
+Asistente de atención al cliente para una tienda ficticia de electrónica, construido con FastAPI y Groq (Llama 3.3 70B).
 
-## Features
+## Características
 
-- Conversational assistant specialized in electronics (smartphones, laptops, headphones, tablets)
-- Per-user conversation history maintained in memory
-- Off-topic message filtering — no LLM tokens wasted on unrelated queries
-- Graceful error handling — clients always receive a friendly response
-- Simple chat UI included
+- Conversación especializada en electrónica (smartphones, notebooks, auriculares, tablets)
+- Historial de conversación por usuario
+- Filtro de mensajes fuera de tema — no consume tokens innecesarios
+- Manejo de errores: el cliente siempre recibe una respuesta amigable
+- Interfaz de chat incluida
 
-## Requirements
+## Requisitos
 
 - Python 3.9+
-- A free [Groq API key](https://console.groq.com)
+- Una [API key gratuita de Groq](https://console.groq.com)
 
-## Setup
+## Instalación
+
+### 1. Clonar el repositorio
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/DiegoFlores17/bircle-chat.git
-cd bircle-chat
+git clone https://github.com/DiegoFlores17/bircle-chat-assistant.git
+cd bircle-chat-assistant
+```
 
-# 2. Create and activate a virtual environment
+### 2. Crear entorno virtual
+
+```bash
 python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate
+```
 
-# 3. Install dependencies
+> Windows: `.venv\Scripts\activate`
+
+### 3. Instalar dependencias
+
+```bash
 pip install -r requirements.txt
-
-# 4. Configure environment variables
-cp .env.example .env
-# Edit .env and add your Groq API key
 ```
 
-`.env` file:
+### 4. Configurar la API key
+
+Crear un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+
 ```
-GROQ_API_KEY=your_key_here
+GROQ_API_KEY=tu_key_aqui
 ```
 
-## Running the server
+La key se obtiene gratis en [console.groq.com](https://console.groq.com) → API Keys → Create API Key.
+
+> **Sin API key:** el servicio funciona igual en modo mock con respuestas predefinidas.
+
+### 5. Iniciar el servidor
 
 ```bash
 uvicorn main:app --reload
 ```
 
-The server starts at `http://localhost:8000`.
+El servidor queda disponible en `http://localhost:8000`.
 
-> **No API key?** The service runs in mock mode with predefined responses — no setup required.
+---
 
-## Testing
+## Cómo probarlo
 
-**Chat UI** — open in your browser:
+### Opción A — Interfaz visual
+
+Abrí en el browser:
+
 ```
 http://localhost:8000/ui
 ```
 
-**Swagger UI** (interactive API docs):
+### Opción B — Swagger UI (documentación interactiva)
+
 ```
 http://localhost:8000/docs
 ```
 
-**curl:**
+### Opción C — curl
+
 ```bash
-# Send a message
+# Enviar un mensaje
 curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
   -d '{"user_id": "u1", "message": "qué notebooks tienen?"}'
 
-# Health check
+# Verificar que el servidor está activo
 curl http://localhost:8000/health
 
-# Clear conversation history
+# Limpiar el historial de un usuario
 curl -X DELETE http://localhost:8000/chat/u1
 ```
 
-## API Reference
+---
 
-### `POST /chat`
+## Endpoints
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/chat` | Enviar un mensaje al asistente |
+| `GET` | `/health` | Verificar estado del servidor |
+| `DELETE` | `/chat/{user_id}` | Limpiar historial de un usuario |
+
+### POST /chat
+
+Request:
 ```json
-// Request
 { "user_id": "string", "message": "string" }
+```
 
-// Response
+Response:
+```json
 { "response": "string", "user_id": "string" }
 ```
 
-### `GET /health`
-```json
-{ "status": "ok" }
-```
+---
 
-### `DELETE /chat/{user_id}`
-Clears the conversation history for the given user.
-
-## Project Structure
+## Estructura del proyecto
 
 ```
-├── main.py          # FastAPI app and endpoints
-├── llm.py           # Groq integration, mock, and off-topic filter
-├── models.py        # Pydantic request/response models
+├── main.py          # App FastAPI y endpoints
+├── llm.py           # Integración con Groq, mock y filtro de temas
+├── models.py        # Modelos Pydantic
 ├── requirements.txt
-├── static/
-│   └── index.html   # Chat UI
-└── .env.example
+└── static/
+    └── index.html   # Interfaz de chat
 ```
