@@ -57,7 +57,6 @@ La key se obtiene gratis en [console.groq.com](https://console.groq.com) → API
 uvicorn main:app --reload
 ```
 
-El servidor queda disponible en `http://localhost:8000`.
 
 ---
 
