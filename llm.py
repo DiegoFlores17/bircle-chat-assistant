@@ -1,7 +1,7 @@
 import json
 import os
 
-from groq import AsyncGroq, AuthenticationError
+from groq import AsyncGroq, AuthenticationError, RateLimitError
 
 SYSTEM_PROMPT = """Eres Alex, un asistente de atención al cliente amable y conciso de TechShop, una tienda de electrónica.
 
@@ -147,6 +147,8 @@ async def get_llm_response(message: str, history: list[dict]) -> str:
         )
     except AuthenticationError:
         raise RuntimeError("API key inválida. Verificá el valor de GROQ_API_KEY en tu archivo .env.")
+    except RateLimitError:
+        raise RuntimeError("Límite de solicitudes de Groq alcanzado. Intentá de nuevo en unos segundos.")
     return response.choices[0].message.content
 
 
